@@ -1,11 +1,22 @@
 #takes hexadecimal input, returns rgb output
-from turtle import xcor
-
 
 def hex_to_rgb(value):
     value = value.lstrip('#')
     lv = len(value)
     return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+#checks surrounding coordinates to see if the pixel is on a border of a state
+def is_on_border(list,index,width):
+    current_state = list[index]['admin1']
+    if(list[index + 1]['admin1'] != current_state):
+        return True
+    if(list[index - 1]['admin1'] != current_state):
+        return True
+    if(list[index + width]['admin1'] != current_state):
+        return True
+    if(list[index - width]['admin1'] != current_state):
+        return True
+    return False
 
 #neccisary for geocoder to run, idk why
 if __name__ == '__main__':
@@ -67,12 +78,17 @@ if __name__ == '__main__':
     #adds extra variable to the coordList that defines if it is part of the continental US
     results = reverse_geocoder.search(rgInput)
     for i in range(len(results)):
+        if i %20000 == 0:
+            print(i/len(results))
         if(globe.is_land(coordsList[i][2],coordsList[i][3]) and results[i]['cc'] == "US"):
             coordsList[i][4] = 1
+            if(is_on_border(results,i,height)):
+                coordsList[i][4] = 2
+
 
     #creates display by iterating through the pixels of the screen and coloring by comparison to the csv
     for i in coordsList:
-        if i[4] == 1:
+        if i[4] >= 1:
             #iterating through parks to see which one is closest
             color = "#000000"
             closest = 9999999
@@ -82,7 +98,11 @@ if __name__ == '__main__':
                 if distance < closest:
                     color = j[4]
                     closest = distance
-            pygame.draw.rect(DISPLAY,hex_to_rgb(color),((-1 * i[0]) + (width),(-1 * i[1]) + (height),1,1))
+            color = hex_to_rgb(color)
+            if i[4] == 2:
+                newcolor = tuple(int(255 - color[i]) for i in range(len(color)))
+                color = newcolor
+            pygame.draw.rect(DISPLAY,color,((-1 * i[0]) + (width),(-1 * i[1]) + (height),1,1))
             pygame.display.update()
 
     print('done')
